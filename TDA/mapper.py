@@ -104,14 +104,14 @@ for i in range(n_tf):
 
 common_targets_tf_save = common_targets_tf
 
-plt.figure(figsize=(12, 10))  # Adjust the figure size for better visibility
-sns.heatmap(
-    common_targets_tf_save,
-    cmap="magma_r",  # Choose a colormap
-    annot=False,      # Disable annotations for large arrays
-    cbar=True,        # Show the colorbar
-    cbar_kws={'label': 'Value'}
-)
+# plt.figure(figsize=(12, 10))  # Adjust the figure size for better visibility
+# sns.heatmap(
+#     common_targets_tf_save,
+#     cmap="magma_r",  # Choose a colormap
+#     annot=False,      # Disable annotations for large arrays
+#     cbar=True,        # Show the colorbar
+#     cbar_kws={'label': 'Value'}
+# )
 
 
 common_targets_tf = np.where(common_targets_tf > 0, np.ones(common_targets_tf.shape), np.zeros(common_targets_tf.shape))
@@ -200,42 +200,42 @@ nx.draw(mapper_graph, pos=pos, with_labels=False,
                                                     [:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
 ### Plot Graph colored by number of TF in Cluster
 
-signif_tf_cluster = pd.read_csv('./Significant_TFs_per_cluster.tsv', sep='\t', header=0, index_col=0)
-signif_tf_cluster.drop(index=[10,12],inplace=True)
-signif_tf_cluster['Significant'].to_list()
+# signif_tf_cluster = pd.read_csv('./Significant_TFs_per_cluster.tsv', sep='\t', header=0, index_col=0)
+# signif_tf_cluster.drop(index=[10,12],inplace=True)
+# signif_tf_cluster['Significant'].to_list()
 
 
-plt.figure()
-pos = nx.kamada_kawai_layout(mapper_graph)
-number_tf = [len(mapper.node_info_[v]["indices"]) for v in mapper_graph.nodes()]
-pathcollection = nx.draw_networkx_nodes(mapper_graph, pos, node_color=number_tf, cmap='Reds')
-nx.draw(mapper_graph, pos=pos, with_labels=True,
-                        cmap='Reds',
-                        node_color = number_tf,
-                        node_size=[10*mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()],
-                        width=[  common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
-                                                    [:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
-plt.colorbar(pathcollection)
+# plt.figure()
+# pos = nx.kamada_kawai_layout(mapper_graph)
+# number_tf = [len(mapper.node_info_[v]["indices"]) for v in mapper_graph.nodes()]
+# pathcollection = nx.draw_networkx_nodes(mapper_graph, pos, node_color=number_tf, cmap='Reds')
+# nx.draw(mapper_graph, pos=pos, with_labels=True,
+#                         cmap='Reds',
+#                         node_color = number_tf,
+#                         node_size=[10*mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()],
+#                         width=[  common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
+#                                                     [:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
+# plt.colorbar(pathcollection)
 
-edge_sums = {
-    (e[0], e[1]): common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])), :]
-    [:, np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()
-    for e in mapper_graph.edges()
-}
+# edge_sums = {
+#     (e[0], e[1]): common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])), :]
+#     [:, np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()
+#     for e in mapper_graph.edges()
+# }
 
-# Assuming the number of nodes is known and is `num_nodes`
-num_nodes = len(mapper.node_info_)
-adj_matrix = np.zeros((num_nodes, num_nodes))
+# # Assuming the number of nodes is known and is `num_nodes`
+# num_nodes = len(mapper.node_info_)
+# adj_matrix = np.zeros((num_nodes, num_nodes))
 
-for (i, j), sum_value in edge_sums.items():
-    adj_matrix[i, j] = sum_value
-    adj_matrix[j, i] = sum_value  # Assuming the graph is undirected
+# for (i, j), sum_value in edge_sums.items():
+#     adj_matrix[i, j] = sum_value
+#     adj_matrix[j, i] = sum_value  # Assuming the graph is undirected
 
-adj_matrix_df = pd.DataFrame(adj_matrix)
-adj_matrix_df_no_zero = adj_matrix_df.loc[~(adj_matrix_df==0).all(axis=1)]
-adj_matrix_df_filtered = adj_matrix_df_no_zero.loc[:, ~(adj_matrix_df_no_zero == 0).all(axis=0)]
+# adj_matrix_df = pd.DataFrame(adj_matrix)
+# adj_matrix_df_no_zero = adj_matrix_df.loc[~(adj_matrix_df==0).all(axis=1)]
+# adj_matrix_df_filtered = adj_matrix_df_no_zero.loc[:, ~(adj_matrix_df_no_zero == 0).all(axis=0)]
 
-plt.figure(figsize=(12, 10))  # Adjust the figure size for better visibility
+# plt.figure(figsize=(12, 10))  # Adjust the figure size for better visibility
 # sns.heatmap(
 #     adj_matrix,
 #     cmap="magma_r",  # Choose a colormap
@@ -244,16 +244,16 @@ plt.figure(figsize=(12, 10))  # Adjust the figure size for better visibility
 #     cbar_kws={'label': 'Number of targets between clusters'},
 #     fmt ='g'
 # )
-sns.clustermap(
-    adj_matrix_df_filtered,
-    cmap="magma_r",  # Choose a colormap
-    annot=True,      # Enable annotations
-    cbar=True,        # Show the colorbar
-    cbar_kws={'label': 'Number of targets between clusters'},
-    fmt ='g',
-    method='average',
-    metric='correlation'
-)
+# sns.clustermap(
+#     adj_matrix_df_filtered,
+#     cmap="magma_r",  # Choose a colormap
+#     annot=True,      # Enable annotations
+#     cbar=True,        # Show the colorbar
+#     cbar_kws={'label': 'Number of targets between clusters'},
+#     fmt ='g',
+#     method='average',
+#     metric='correlation'
+# )
 
 # adj_matrix_df.to_csv('./adj_matrix.adj', sep='\t', header=True, index=True)
 # le.inverse_transform( [int(i) for i in le_tf.inverse_transform([70])])
