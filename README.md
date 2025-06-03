@@ -100,14 +100,14 @@ From the raw transcriptomics table:
 
 GRN and Activities:
 `GRN.ipynb` to retrieve the necessary networks (GRN and KEGG) from TomTom and check them.
-`TF_activity_tstat.ipynb` to perform TF and pathway activites.
+`TF_pathway_activity.ipynb` to perform TF and pathway activites.
 
 TDA: 
 `TDA/Prepare_data.ipynb` to format the data for TDA.
-`TDA/mapper.py` to obtain the TDA network colored for all pathogens and `TDA/mapper_two.py` to obtain the four configuration.
+`TDA/mapper.py` to obtain the TDA network colored for all pathogens and the four configuration.
 Finally, `TDA/Hub_TDA.ipynb` to detect hub in each of the configuration and `TDA/Pathway_acts_hubs.ipynb` to check for pathways activity in the sub-GRN of the hubs. 
 
-For the plots, most of them are obtain with `Plot/Plot_clean.ipynb` and at the end of `TDA/plots.ipynb`
+For the plots, most of them are obtain with `Plot/Plot_clean.ipynb` or directly within `TF_pathway_acitivity.ipynb`
 
 NB: gudhi package must be changed to have the correct plot :
 `miniconda3/envs/{ENV_NAME}/lib/python3.1/site-packages/gudhi` and `cover_complex.py` the original `np.mean` from the fit method of the CoverComplexPy class must be change to `np.nanmean`.

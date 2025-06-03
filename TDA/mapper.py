@@ -31,7 +31,7 @@ class GraphCC(BaseEstimator, TransformerMixin):
         return self.labels_
 
 # Read GRN
-X = pd.read_csv('./Curated_gene_regulatory_network.tsv', sep='\t', header=0, index_col=None)
+X = pd.read_csv('./Data/Curated_gene_regulatory_network.tsv', sep='\t', header=0, index_col=None)
 X = np.array(X)
 # print(len(X), len(np.unique(X[:,0])), len(np.unique(X[:,1])))
 
@@ -44,8 +44,8 @@ X[:,0] = le.transform(X[:,0])
 X[:,1] = le.transform(X[:,1])
 
 # Read expression + stats
-F1 = pd.read_csv('./LogFC_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
-F2 = pd.read_csv('./Stats_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
+F1 = pd.read_csv('./Data/LogFC_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
+F2 = pd.read_csv('./Data/Stats_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
 # print(np.array(F1), np.array(F2))
 # print(F1.columns)
 
@@ -55,7 +55,8 @@ F2[:,0] = le.transform(F2[:,0])
 # print(F1,F2)
 
 # Read activity
-A = pd.read_csv('./Activity_TF_in_cGRN.tsv', sep='\t', header=0, index_col=None)
+A = pd.read_csv('./Data/Activity_TF_in_cGRN.tsv', sep='\t', header=0, index_col=None)
+pathogen_names = np.array(A.columns)
 A = np.array(A)
 A[:,0] = le.transform(A[:,0])
 
@@ -140,7 +141,7 @@ print(eigenvectors.shape)
 #plt.figure()
 #plt.hist(eigenvectors[:,0], bins=300)
 #plt.show()
-
+amin, amax = A_tf[:,1:].min(), A_tf[:,1:].max()
 
 A_tf_filtered = np.where(np.abs(A_tf) < 2, np.nan , A_tf)
 A_tf_filtered = A_tf_filtered.astype(float)
@@ -159,7 +160,7 @@ mapper.fit(X=np.arange(n_tf)[:,None], filters=eigenvectors[:,0:2], colors=np.hst
 # 2D visu
 mapper_graph = mapper.get_networkx()
 
-print([(v, le.inverse_transform(  [int(i) for i in le_tf.inverse_transform(mapper.node_info_[v]["indices"])]  )) for v in mapper_graph.nodes()])
+# print([(v, le.inverse_transform(  [int(i) for i in le_tf.inverse_transform(mapper.node_info_[v]["indices"])]  )) for v in mapper_graph.nodes()])
 with open("mapper_nodes.txt", "w") as f:
     result = [(v, le.inverse_transform([int(i) for i in le_tf.inverse_transform(mapper.node_info_[v]["indices"])])) for v in mapper_graph.nodes()]
     f.write(str(result))
@@ -198,249 +199,186 @@ nx.draw(mapper_graph, pos=pos, with_labels=False,
                         node_size=[10*mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()],
                         width=[  common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
                                                     [:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
-### Plot Graph colored by number of TF in Cluster
-
-# signif_tf_cluster = pd.read_csv('./Significant_TFs_per_cluster.tsv', sep='\t', header=0, index_col=0)
-# signif_tf_cluster.drop(index=[10,12],inplace=True)
-# signif_tf_cluster['Significant'].to_list()
 
 
-# plt.figure()
-# pos = nx.kamada_kawai_layout(mapper_graph)
-# number_tf = [len(mapper.node_info_[v]["indices"]) for v in mapper_graph.nodes()]
-# pathcollection = nx.draw_networkx_nodes(mapper_graph, pos, node_color=number_tf, cmap='Reds')
-# nx.draw(mapper_graph, pos=pos, with_labels=True,
-#                         cmap='Reds',
-#                         node_color = number_tf,
-#                         node_size=[10*mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()],
-#                         width=[  common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
-#                                                     [:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
-# plt.colorbar(pathcollection)
+## Get the different configurations
+mapper_graph = mapper.get_networkx()
+mapper_nodes = mapper_graph.nodes()
+n_nodes = len(mapper_nodes)
+mapper_neighbors = [[] for _ in range(n_nodes)]
+perm = {idx_r: id_v for idx_r, id_v in enumerate(mapper_nodes)}
+mapper_matrix = nx.adjacency_matrix(mapper_graph)
+mapper_matrix = mapper_matrix.toarray()
+for idx_r, id_v in enumerate(mapper_nodes):
+    idx_neighb = np.argwhere(mapper_matrix[idx_r,:] == 1).ravel()
+    neighb_v = [perm[n] for n in idx_neighb]
+    mapper_neighbors[id_v] = neighb_v
+mapper_width = np.zeros([n_nodes, n_nodes])
+edge_width = []
+for e in mapper_graph.edges():
+    width = common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:][:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100
+    mapper_width[e[0],e[1]] = width
+    mapper_width[e[1],e[0]] = width
+    edge_width.append(width)
+target_function = mapper_width.sum(axis=1)
+tmin, tmax = target_function.min(), target_function.max()
 
-# edge_sums = {
-#     (e[0], e[1]): common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])), :]
-#     [:, np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()
-#     for e in mapper_graph.edges()
-# }
+#print([(v, le.inverse_transform(  [int(i) for i in le_tf.inverse_transform(mapper.node_info_[v]["indices"])]  )) for v in mapper_graph.nodes()])
 
-# # Assuming the number of nodes is known and is `num_nodes`
-# num_nodes = len(mapper.node_info_)
-# adj_matrix = np.zeros((num_nodes, num_nodes))
+def gaussian_1D(x,m,s):
+    return np.exp(-(x-m)**2/s**2)
 
-# for (i, j), sum_value in edge_sums.items():
-#     adj_matrix[i, j] = sum_value
-#     adj_matrix[j, i] = sum_value  # Assuming the graph is undirected
+def activity_modes(x, s):
+    return gaussian_1D(x, -4., s) + gaussian_1D(x, 0., s) + gaussian_1D(x, 4., s) if not np.isnan(x) else -10.
 
-# adj_matrix_df = pd.DataFrame(adj_matrix)
-# adj_matrix_df_no_zero = adj_matrix_df.loc[~(adj_matrix_df==0).all(axis=1)]
-# adj_matrix_df_filtered = adj_matrix_df_no_zero.loc[:, ~(adj_matrix_df_no_zero == 0).all(axis=0)]
+def target_modes(x, s):
+    return gaussian_1D(x, 0., s) + gaussian_1D(x, 33., s)
 
-# plt.figure(figsize=(12, 10))  # Adjust the figure size for better visibility
-# sns.heatmap(
-#     adj_matrix,
-#     cmap="magma_r",  # Choose a colormap
-#     annot=True,      # Enable annotations
-#     cbar=True,        # Show the colorbar
-#     cbar_kws={'label': 'Number of targets between clusters'},
-#     fmt ='g'
-# )
-# sns.clustermap(
-#     adj_matrix_df_filtered,
-#     cmap="magma_r",  # Choose a colormap
-#     annot=True,      # Enable annotations
-#     cbar=True,        # Show the colorbar
-#     cbar_kws={'label': 'Number of targets between clusters'},
-#     fmt ='g',
-#     method='average',
-#     metric='correlation'
-# )
+a_bw, t_bw = .85, 10.
 
-# adj_matrix_df.to_csv('./adj_matrix.adj', sep='\t', header=True, index=True)
-# le.inverse_transform( [int(i) for i in le_tf.inverse_transform([70])])
+plt.figure()
+ax = plt.gca()
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.plot(np.arange(-5.,5.,0.01), [activity_modes(x, a_bw) for x in np.arange(-5.,5.,0.01)])
+plt.xlabel('Old Filter (TF ULM Activity)')
+plt.ylabel('New Filter')
+plt.savefig('../Plot/Filter_function_activity.svg', format='svg')
+plt.show()
 
-# #plt.figure()
-# #plt.hist([mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()], bins=20)
-# #plt.show()
+plt.figure()
+ax = plt.gca()
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.plot(np.arange(0.,33.,0.1), [target_modes(x, t_bw) for x in np.arange(0.,33.,0.1)])
+plt.xlabel('Old Filter (edge thickness)')
+plt.ylabel('New Filter')
+plt.savefig('../Plot/Filter_function_edge.svg', format='svg')
+plt.show()
 
-# le.inverse_transform( [int(i) for i in le_tf.inverse_transform([70])])
-# le_tf.transform( [int(i) for i in le.transform(['Solyc12g099370'])])
-# ##split the common targets into cluster
-# [mapper.node_info_[v]["indices"] for v in mapper_graph.nodes()]
+clusters, clusters_nodes, clusters_nodes_ens = {}, {v: [] for v in mapper_graph.nodes()}, {v: [] for v in mapper_graph.nodes()}
 
-# ## plot by Clusters
-# for v in mapper_graph.nodes():
-#     indices = np.array(mapper.node_info_[v]["indices"]) # indices of TF in the cluster node
-#     common_targets_tf_save_nodes = common_targets_tf_save[np.ix_(indices, indices)] ##
-#     plt.figure(figsize=(16, 12))  # Increase the figure size for better visibility
-#     sns.heatmap(
-#         common_targets_tf_save_nodes,
-#         cmap="magma_r",  # Choose a colormap
-#         annot=False,      # Disable annotations for large arrays
-#         cbar=True,        # Show the colorbar
-#         cbar_kws={'label': 'Shared Targets'},
-#         xticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(indices)]), # Even tho we loose it we can access it with indices and transform back into OLN
-#         yticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(indices)])
-#     )
-#     plt.title(f'Adjacency matrix of targets in cluster {v}')
-#     # plt.savefig(f'./Adj_shared_targets/Adjacency_targets_cluster_{v}.png', dpi=300, bbox_inches='tight' )   
+for cond in range(1, A_tf.shape[1] + 1):
 
-# cluster = X[np.isin(X[:,0],le_tf.inverse_transform(mapper.node_info_[7]["indices"]))]
-# len(np.unique(np.concatenate((cluster[:,0], cluster[:,1]))))
+    ##### Display graph
 
-# ##Plot combining clusters
-# custom_cluster = [7, 19]
-# # custom_cluster = [18,9,13,15,17]
-# saved_indices = list()
-# for v in custom_cluster:
-#     indices = np.array(mapper.node_info_[v]["indices"])  # get the indices of the TF in the cluster
-#     saved_indices.extend(indices)
-    
-# saved_indices = np.unique(saved_indices)
+    plt.figure()
+    # One possible layout, use the one you prefer
+    pos = nx.kamada_kawai_layout(mapper_graph)
+    # Specify node colors
+    #node_color = [mapper.node_info_[v]["colors"][cond] for v in mapper_graph.nodes()] if cond < A_tf.shape[1] else [target_function[v] for v in mapper_graph.nodes()]
+    #node_color = [activity_modes(mapper.node_info_[v]["colors"][cond], a_bw) for v in mapper_graph.nodes()] if cond < A_tf.shape[1] else [target_modes(target_function[v], t_bw) for v in mapper_graph.nodes()]
+    #ncmin, ncmax = np.array(node_color).min(), np.array(node_color).max()
+    pathcollection = nx.draw_networkx_nodes(mapper_graph, pos, 
+                                            node_color=[mapper.node_info_[v]["colors"][cond] for v in mapper_graph.nodes()] if cond < A_tf.shape[1] else [target_function[v] for v in mapper_graph.nodes()], 
+                                            vmin=amin if cond < A_tf.shape[1] else tmin, vmax=amax if cond < A_tf.shape[1] else tmax,
+                                            #node_color=[activity_modes(mapper.node_info_[v]["colors"][cond], a_bw) for v in mapper_graph.nodes()] if cond < A_tf.shape[1] else [target_modes(target_function[v], t_bw) for v in mapper_graph.nodes()], 
+                                            #vmin=ncmin, vmax=ncmax,
+                                            #vmin=0, vmax=1,
+                                            node_size=[30+10*mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()])
+    # Specify node sizes and edge weights
+    nx.draw(mapper_graph, pos=pos, with_labels=True,
+                          node_color=[np.nan for v in mapper_graph.nodes()],
+                          width=edge_width)
+    # Plot colorscale
+    plt.colorbar(pathcollection)
+    # plt.savefig('mapper_' + str(cond))
 
-# common_targets_tf_save_nodes = common_targets_tf_save[np.ix_(saved_indices, saved_indices)] ##get the targets of the TF thanks to the indices
-# plt.figure(figsize=(16, 12))  # Increase the figure size for better visibility
-# sns.heatmap(
-#     common_targets_tf_save_nodes,
-#     cmap="magma_r",  # Choose a colormap
-#     annot=False,      # Disable annotations for large arrays
-#     cbar=True,        # Show the colorbar
-#     cbar_kws={'label': 'Shared Targets'},
-#     xticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(saved_indices)]), # Even tho we loose it we can access it with indices and transform back into OLN
-#     yticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(saved_indices)])
-# )
-# plt.title(f'Adjacency matrix of targets in cluster {custom_cluster}')
+    ##### Node clustering
 
-# ### Jaccard index of TF targets of combined clusters
-# # Idea is to compute the index based on their targets instead of just numbers.
+    tomato = Tomato(graph_type='manual', density_type='manual', n_clusters=None, merge_threshold=None)
+    weights = [0 for _ in range(n_nodes)]
+    for v in mapper_graph.nodes():
+        weights[v] = activity_modes(mapper.node_info_[v]["colors"][cond], a_bw) if cond < A_tf.shape[1] else target_modes(target_function[v], t_bw)
+    tomato.fit(X=mapper_neighbors, y=None, weights=weights)
+    n_clusters = tomato.labels_.max() + 1
 
-# common_targets_tf_jaccard = np.zeros([n_tf, n_tf])
+    ##### Display graph
 
-# for i in range(n_tf):
-#     for j in range(i+1,n_tf):
-#         common_targets_tf_jaccard[i,j] = len(np.intersect1d(np.array(targets_tf[i]), np.array(targets_tf[j]))) / len(np.union1d(np.array(targets_tf[i]), np.array(targets_tf[j])))
-#         common_targets_tf_jaccard[j,i] = len(np.intersect1d(np.array(targets_tf[i]), np.array(targets_tf[j]))) / len(np.union1d(np.array(targets_tf[i]), np.array(targets_tf[j])))
+    fig, ax = plt.subplots()
+    # One possible layout, use the one you prefer
+    pos = nx.kamada_kawai_layout(mapper_graph)
+    # Specify node colors
+    cmap = plt.get_cmap('rainbow', n_clusters)
+    pathcollection = nx.draw_networkx_nodes(mapper_graph, pos, 
+                                            node_color=[tomato.labels_[v] for v in mapper_graph.nodes()], 
+                                            node_size=[100 if weights[v] != -10. else 0 for v in mapper_graph.nodes()],
+                                            cmap=cmap)
+    # Specify node sizes and edge weights
+    nx.draw(mapper_graph, pos=pos, with_labels=True,
+                          node_color=[np.nan for v in mapper_graph.nodes()],
+                          width=edge_width)
+    # Plot colorscale
+    delta = (n_clusters-1)/n_clusters
+    cbar = fig.colorbar(pathcollection, ticks=np.arange(delta/2, n_clusters-1, delta))
+    cbar.ax.set_yticklabels(np.arange(0, n_clusters, 1))
 
-# ## If we want to divide by the total number of targets
-# # mega_cluster = X[np.isin(X[:,0],le_tf.inverse_transform(saved_indices))]
-# # len(np.unique(np.concatenate((mega_cluster[:,0], mega_cluster[:,1]))))
+    # plt.savefig('mapper_' + str(cond) + '_clusters')
 
-# common_targets_tf_jaccard_nodes = common_targets_tf_jaccard[np.ix_(saved_indices, saved_indices)]
-# plt.figure(figsize=(16, 12))  # Increase the figure size for better visibility
-# sns.heatmap(
-#     common_targets_tf_jaccard_nodes,
-#     cmap="magma_r",  # Choose a colormap
-#     annot=False,      # Disable annotations for large arrays
-#     cbar=True,        # Show the colorbar
-#     cbar_kws={'label': 'Shared Targets'},
-#     vmin=0,
-#     vmax=0.35,
-#     xticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(saved_indices)]), # Even tho we loose it we can access it with indices and transform back into OLN
-#     yticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(saved_indices)])
-# )
-# plt.title(f'Adjacency matrix of targets in cluster {custom_cluster}')
+    ### Display clusters
 
-### Function
-def jaccard_index_tf_targets(targets_tf, n_tf):
-    """
-    Calculate the Jaccard index for pairs of transcription factors (TFs) based on their target genes.
+    for lab in np.unique(tomato.labels_):
+        idx_lab = np.argwhere((tomato.labels_ == lab) & (np.array(weights) != -10.)).ravel() if cond < A_tf.shape[1] else np.argwhere(tomato.labels_ == lab).ravel()
+        if cond < A_tf.shape[1]:
+            clusters[pathogen_names[cond] + '_cluster' + str(lab)] = idx_lab
+            for idx in idx_lab:
+                clusters_nodes[idx].append(pathogen_names[cond] + '_cluster' + str(lab))
+                pathogen = pathogen_names[cond].split('_')[0]
+                if pathogen not in clusters_nodes_ens[idx]:
+                    clusters_nodes_ens[idx].append(pathogen)
+        else:
+            clusters['numtargets_cluster' + str(lab)] = idx_lab
+            for idx in idx_lab:
+                clusters_nodes[idx].append('numtargets_cluster' + str(lab))
+                if lab <= 5:
+                    targetlab = 'exclusive'
+                elif lab == 6: 
+                    targetlab = 'mildly_shared'
+                else:
+                    targetlab = 'shared'
+                clusters_nodes_ens[idx].append(targetlab)
 
-    The Jaccard index is a measure of similarity between two sets, defined as the size of the intersection 
-    divided by the size of the union of the sets.
+#print(clusters)
+for k, v in clusters_nodes_ens.items():
+    if len(v) - 1 == 0:
+        v = ['N/A'] + v
+    elif len(v) - 1 == 1:
+        v = ['specific'] + v[-1:]
+    else:
+        v = ['multiple'] + v[-1:]
+    clusters_nodes_ens[k] = v
 
-    Parameters:
-    targets_tf (list of lists): A list where each element is a list of target genes for a specific TF.
-    n_tf (int): The number of transcription factors.
+##### Display graph
 
-    Returns:
-    numpy.ndarray: A 2D array of shape (n_tf, n_tf) containing the Jaccard index for each pair of TFs.
-    """
-    common_targets_tf_jaccard = np.zeros([n_tf, n_tf])
+mapper_graph.remove_nodes_from(list(nx.isolates(mapper_graph)))
 
-    for i in range(n_tf):
-        for j in range(i+1,n_tf):
-            common_targets_tf_jaccard[i,j] = len(np.intersect1d(np.array(targets_tf[i]), np.array(targets_tf[j]))) / len(np.union1d(np.array(targets_tf[i]), np.array(targets_tf[j])))
-            common_targets_tf_jaccard[j,i] = len(np.intersect1d(np.array(targets_tf[i]), np.array(targets_tf[j]))) / len(np.union1d(np.array(targets_tf[i]), np.array(targets_tf[j])))
-    return common_targets_tf_jaccard
+clusters_ens = ['' for k,v in clusters_nodes_ens.items()]
+for k,v in clusters_nodes_ens.items():
+    clusters_ens[k] = '_'.join(v)
+list_clusters = np.unique(clusters_ens)
+n_clusters_ens = len(list_clusters)
+clusters_env_perm = {idx_clus: clus for idx_clus, clus in enumerate(list_clusters)}
+clusters_env_perm_inv = {clus: idx_clus for idx_clus, clus in enumerate(list_clusters)}
 
-def plot_adjacency_matrix(targets_tf, n_tf, custom_cluster):
-    common_targets_tf_jaccard = jaccard_index_tf_targets(targets_tf, n_tf)#Compute the Jaccard index of TF targets
-    # Get the indices of the TFs in the cluster(s)
-    saved_indices = list()
-    for v in custom_cluster:
-        indices = np.array(mapper.node_info_[v]["indices"])  # get the indices of the TF in the cluster
-        saved_indices.extend(indices)
-        
-    saved_indices = np.unique(saved_indices)
-    
-    #Clear non significant TFs
-    to_remove = list()
-    for TF_indices in saved_indices:
-        if np.isnan(A_tf_filtered[TF_indices,1:8]).all():
-            print(f"TF {le.inverse_transform( [int(i) for i in le_tf.inverse_transform([TF_indices])])} has no significant activity data")
-            to_remove = np.append(to_remove, TF_indices)
-    saved_indices = np.setdiff1d(saved_indices, to_remove)
-    
-    # Compute the adjacency matrix of the shared targets based on the global matrix
-    common_targets_tf_jaccard_nodes = common_targets_tf_jaccard[np.ix_(saved_indices, saved_indices)]
-    
-    plt.figure(figsize=(16, 12))  # Increase the figure size for better visibility
-    sns.heatmap(
-        common_targets_tf_jaccard_nodes,
-        cmap="magma_r",  # Choose a colormap
-        annot=False,      # Disable annotations for large arrays
-        cbar=True,        # Show the colorbar
-        cbar_kws={'label': 'Jaccard Index of Shared Targets'},
-        vmin=0,
-        vmax=0.35,
-        xticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(saved_indices)]), # Even tho we loose it we can access it with indices and transform back into OLN
-        yticklabels=le.inverse_transform( [int(i) for i in le_tf.inverse_transform(saved_indices)])
-    )
-    plt.title(f'Adjacency matrix of targets in cluster {custom_cluster}')
-    plt.savefig(f'./Adj_shared_targets/Adjacency_targets_cluster_{custom_cluster}.png', dpi=300, bbox_inches='tight' )
+plt.rcParams['svg.fonttype'] = 'none'
+fig, ax = plt.subplots()
+# One possible layout, use the one you prefer
+pos = nx.kamada_kawai_layout(mapper_graph)
+# Specify node colors
+cmap = plt.get_cmap('rainbow', n_clusters_ens)
+pathcollection = nx.draw_networkx_nodes(mapper_graph, pos, 
+                                        node_color=[clusters_env_perm_inv[clusters_ens[v]] for v in mapper_graph.nodes()], 
+                                        # node_size=[800 if clusters_ens[v].split('_')[0] != 'N/A' else 0 for v in mapper_graph.nodes()],
+                                        node_size=[10*mapper.node_info_[v]["colors"][0] if clusters_ens[v].split('_')[0] != 'N/A' else 0 for v in mapper_graph.nodes()],
+                                        cmap=cmap)
+# Specify node sizes and edge weights
+nx.draw(mapper_graph, pos=pos, with_labels=True,
+                      node_color=[np.nan for v in mapper_graph.nodes()],
+                      width=edge_width)
+# Plot colorscale
+delta = (n_clusters_ens-1)/n_clusters_ens
+cbar = fig.colorbar(pathcollection, ticks=np.arange(delta/2, n_clusters_ens-1, delta))
+cbar.ax.set_yticklabels([clusters_env_perm[c] for c in range(n_clusters_ens)])
 
-plot_adjacency_matrix(targets_tf, n_tf, [0,2,3,5])
-
-### Manually checking
-# clusterA = X[np.isin(X[:,0], le_tf.inverse_transform(mapper.node_info_[7]["indices"]))]
-# clusterB = X[np.isin(X[:,0], le_tf.inverse_transform(mapper.node_info_[19]["indices"]))]
-# combined_cluster = np.concatenate((clusterA, clusterB), axis=0)
-# len(np.unique(np.concatenate((combined_cluster[:,0], combined_cluster[:,1]))))
-
-
-#### Full GRN
-#
-#n_all = len(le.classes_)
-#f1_all,_,all_indices = np.intersect1d(np.arange(n_all), F1[:,0], return_indices=True)
-#F1_all = F1[all_indices,:]
-#f2_all,_,all_indices = np.intersect1d(np.arange(n_all), F2[:,0], return_indices=True)
-#F2_all = F2[all_indices,:]
-#
-#graph_all = np.zeros([n_all, n_all])
-#for pair in X:
-#    graph_all[pair[0], pair[1]] = 1
-#    graph_all[pair[1], pair[0]] = 1
-#    
-#grnCC_all = GraphCC(graph_all)
-#
-#L = nx.normalized_laplacian_matrix(nx.Graph(graph_all))
-#eigenvalues, eigenvectors = np.linalg.eig(L.toarray())
-#eigenvectors = np.real(eigenvectors)
-#print(eigenvectors.shape)
-#
-#plt.figure()
-#plt.hist(eigenvectors[:,0], bins=10)
-#plt.show()
-#
-#mapper = MapperComplex(input_type='point cloud', min_points_per_node=0, filter_bnds=None, resolutions=[5], gains=[0.3], clustering=grnCC_all)
-#mapper.fit(X=np.arange(n_all)[:,None], filters=eigenvectors[:,0:1], colors=np.hstack([eigenvectors[:,0:1], F1_all[:,1:], F2_all[:,1:]])) #n_targets_tf[:,None])
-#
-#mapper.save_to_html(file_name="All", data_name="GRN", cover_name="uniform", color_name="F1:1")
-#
-#mapper_graph = mapper.get_networkx()
-#for cond in range(1,F1_all.shape[1]):
-#    plt.figure()
-#    nx.draw(mapper_graph, pos=nx.kamada_kawai_layout(mapper_graph), 
-#                          node_color=[mapper.node_info_[v]["colors"][cond] for v in mapper_graph.nodes()],
-#                          node_size=[mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()])
-#    plt.show()
-
+plt.savefig('./Plot/Ensembl_cluster_TDA.svg', format='svg')
+plt.show()
