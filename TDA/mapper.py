@@ -17,6 +17,10 @@ import seaborn as sns
 from matplotlib.colors import Normalize
 import math
 from networkx.drawing.nx_agraph import graphviz_layout
+from gudhi.cover_complex import MapperComplex
+from patched_cover_complex import fit
+MapperComplex.fit = fit
+
 plt.rcParams['svg.fonttype'] = 'none'
 # Clustering method based on GRN
 class GraphCC(BaseEstimator, TransformerMixin):
