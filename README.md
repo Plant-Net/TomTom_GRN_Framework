@@ -120,5 +120,5 @@ Finally, `TDA/Hub_TDA.ipynb` to detect hub in each of the configuration and `TDA
 For the plots, most of them are obtain with `Plot/Plot_clean.ipynb` or directly within `TF_pathway_acitivity.ipynb`
 
 ## Reference :writing_hand: 
-You can find all the detailled and explained results [here](https://doi.org/10.1101/2025.04.09.647963)
+You can find all the detailed and explained results [here](https://doi.org/10.1101/2025.04.09.647963)
 
