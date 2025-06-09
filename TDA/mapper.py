@@ -35,7 +35,7 @@ class GraphCC(BaseEstimator, TransformerMixin):
         return self.labels_
 
 # Read GRN
-X = pd.read_csv('./Data/Curated_gene_regulatory_network.tsv', sep='\t', header=0, index_col=None)
+X = pd.read_csv('TDA/Data/Curated_gene_regulatory_network.tsv', sep='\t', header=0, index_col=None)
 X = np.array(X)
 # print(len(X), len(np.unique(X[:,0])), len(np.unique(X[:,1])))
 
@@ -48,8 +48,8 @@ X[:,0] = le.transform(X[:,0])
 X[:,1] = le.transform(X[:,1])
 
 # Read expression + stats
-F1 = pd.read_csv('./Data/LogFC_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
-F2 = pd.read_csv('./Data/Stats_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
+F1 = pd.read_csv('TDA/Data/LogFC_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
+F2 = pd.read_csv('TDA/Data/Stats_genes_in_cGRN.tsv', sep='\t', header=0, index_col=None)
 # print(np.array(F1), np.array(F2))
 # print(F1.columns)
 
@@ -59,7 +59,7 @@ F2[:,0] = le.transform(F2[:,0])
 # print(F1,F2)
 
 # Read activity
-A = pd.read_csv('./Data/Activity_TF_in_cGRN.tsv', sep='\t', header=0, index_col=None)
+A = pd.read_csv('TDA/Data/Activity_TF_in_cGRN.tsv', sep='\t', header=0, index_col=None)
 pathogen_names = np.array(A.columns)
 A = np.array(A)
 A[:,0] = le.transform(A[:,0])
@@ -165,7 +165,7 @@ mapper.fit(X=np.arange(n_tf)[:,None], filters=eigenvectors[:,0:2], colors=np.hst
 mapper_graph = mapper.get_networkx()
 
 # print([(v, le.inverse_transform(  [int(i) for i in le_tf.inverse_transform(mapper.node_info_[v]["indices"])]  )) for v in mapper_graph.nodes()])
-with open("mapper_nodes.txt", "w") as f:
+with open("TDA/mapper_nodes.txt", "w") as f:
     result = [(v, le.inverse_transform([int(i) for i in le_tf.inverse_transform(mapper.node_info_[v]["indices"])])) for v in mapper_graph.nodes()]
     f.write(str(result))
 
@@ -190,19 +190,19 @@ for cond in range(1, A_tf_filtered.shape[1]):
                           vmin=-2.5,
                           vmax=2.5,
                           node_size=[10*mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()],
-                          width=[  common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
-                                                    [:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
+                          width=[  common_targets_tf[np.unique(np.concatenate([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
+                                                    [:,np.unique(np.concatenate([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
     # Plot colorscale
     plt.colorbar(pathcollection)
-    plt.savefig('./Plot/mapper_filtered_' + str(cond) + '.svg', format='svg', dpi=300, bbox_inches='tight')   
+    plt.savefig('TDA/Plot/mapper_filtered_' + str(cond) + '.svg', format='svg', dpi=300, bbox_inches='tight')   
 
 ### Plot Graph without coloring
 plt.figure()
 pos = nx.kamada_kawai_layout(mapper_graph)
 nx.draw(mapper_graph, pos=pos, with_labels=False,
                         node_size=[10*mapper.node_info_[v]["colors"][0] for v in mapper_graph.nodes()],
-                        width=[  common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
-                                                    [:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
+                        width=[  common_targets_tf[np.unique(np.concatenate([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:]
+                                                    [:,np.unique(np.concatenate([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100 for e in mapper_graph.edges()])
 
 
 ## Get the different configurations
@@ -220,7 +220,7 @@ for idx_r, id_v in enumerate(mapper_nodes):
 mapper_width = np.zeros([n_nodes, n_nodes])
 edge_width = []
 for e in mapper_graph.edges():
-    width = common_targets_tf[np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:][:,np.unique(np.concat([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100
+    width = common_targets_tf[np.unique(np.concatenate([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]])),:][:,np.unique(np.concatenate([mapper.node_info_[e[0]]["indices"], mapper.node_info_[e[1]]["indices"]]))].sum()/100
     mapper_width[e[0],e[1]] = width
     mapper_width[e[1],e[0]] = width
     edge_width.append(width)
@@ -247,7 +247,7 @@ ax.spines['right'].set_visible(False)
 plt.plot(np.arange(-5.,5.,0.01), [activity_modes(x, a_bw) for x in np.arange(-5.,5.,0.01)])
 plt.xlabel('Old Filter (TF ULM Activity)')
 plt.ylabel('New Filter')
-plt.savefig('../Plot/Filter_function_activity.svg', format='svg')
+plt.savefig('Plot/Filter_function_activity.svg', format='svg')
 plt.show()
 
 plt.figure()
@@ -257,7 +257,7 @@ ax.spines['right'].set_visible(False)
 plt.plot(np.arange(0.,33.,0.1), [target_modes(x, t_bw) for x in np.arange(0.,33.,0.1)])
 plt.xlabel('Old Filter (edge thickness)')
 plt.ylabel('New Filter')
-plt.savefig('../Plot/Filter_function_edge.svg', format='svg')
+plt.savefig('Plot/Filter_function_edge.svg', format='svg')
 plt.show()
 
 clusters, clusters_nodes, clusters_nodes_ens = {}, {v: [] for v in mapper_graph.nodes()}, {v: [] for v in mapper_graph.nodes()}
@@ -384,5 +384,5 @@ delta = (n_clusters_ens-1)/n_clusters_ens
 cbar = fig.colorbar(pathcollection, ticks=np.arange(delta/2, n_clusters_ens-1, delta))
 cbar.ax.set_yticklabels([clusters_env_perm[c] for c in range(n_clusters_ens)])
 
-plt.savefig('./Plot/Ensembl_cluster_TDA.svg', format='svg')
+plt.savefig('TDA/Plot/Ensembl_cluster_TDA.svg', format='svg')
 plt.show()
