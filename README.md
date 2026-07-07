@@ -122,7 +122,7 @@ For the plots, most of them are obtain with `Plot/Plot_clean.ipynb` or directly 
 For the supplementary table, with all informations for each TFs of the GRN (t-stats, activities, TDA group, TF Familly,...), you can create it after running the workflow with `Create_SUPP_table.ipynb`
 
 ## Reference :writing_hand: 
-You can find all the detailed and explained results [here](https://doi.org/10.1101/2025.04.09.647963)
+You can find all the details and explained results in the [publication](https://doi.org/10.1111/nph.71382)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20322180.svg)](https://doi.org/10.5281/zenodo.20322180)
 
